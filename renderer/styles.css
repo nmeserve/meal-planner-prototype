@@ -146,6 +146,15 @@ body {
   gap: 4px;
 }
 
+.calendar-cell-clickable {
+  cursor: pointer;
+}
+
+.calendar-cell-clickable:hover {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+}
+
 .calendar-day-label {
   font-size: 13px;
   font-weight: 600;
@@ -154,6 +163,85 @@ body {
 .calendar-theme-label {
   font-size: 12px;
   color: #9ca3af;
+}
+
+/* Recipe popup modal – hidden by default, shown when .recipe-modal-open is set */
+.recipe-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.recipe-modal.recipe-modal-open {
+  display: flex;
+}
+
+.recipe-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.recipe-modal-box {
+  position: relative;
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 16px;
+  padding: 20px 24px 24px;
+  min-width: 280px;
+  max-width: 420px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.recipe-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.recipe-modal-close:hover {
+  color: #e5e7eb;
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.recipe-modal-title {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.recipe-modal-list {
+  margin: 0 0 16px;
+  padding-left: 20px;
+}
+
+.recipe-modal-list li {
+  margin-bottom: 4px;
+}
+
+.recipe-modal-empty {
+  list-style: none;
+  padding-left: 0;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.recipe-modal-roll {
+  margin-top: 4px;
 }
 
 @media (max-width: 960px) {
