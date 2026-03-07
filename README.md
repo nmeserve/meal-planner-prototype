@@ -19,3 +19,6 @@ This is an interactive meal planning tool, built as a desktop app with Electron.
    ```
 
 This will launch a modern UI shell for a weekly meal planner. You can click days in the grid and use the "New Weekly Plan" button; the data is mock for now, ready to be replaced with real planning logic in future steps.
+
+
+This project was made using Cursor.
