@@ -17,6 +17,8 @@ const DAYS_OF_WEEK = [
   'Sunday',
 ];
 
+const STORAGE_KEY = 'mealPlanner.weeklyState';
+
 /**
  * Minimal state holder for this prototype.
  * Later, additional fields can be added (recipes, ingredients, etc.).
@@ -46,6 +48,79 @@ const state = {
 
 /** Full recipe objects for the current pick modal (so we can store the one the user selects). */
 let currentModalRecipes = [];
+
+/**
+ * Loads saved state from localStorage (themes, portion size, selected recipes).
+ * Merges into state; does nothing if no saved data or parse error.
+ */
+function loadStateFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.portionSize != null && Number(saved.portionSize) > 0) {
+      state.portionSize = Number(saved.portionSize);
+    }
+    if (saved.themes && typeof saved.themes === 'object') {
+      DAYS_OF_WEEK.forEach((day) => {
+        if (saved.themes[day] != null) state.themes[day] = String(saved.themes[day]);
+      });
+    }
+    if (saved.selectedRecipes && typeof saved.selectedRecipes === 'object') {
+      DAYS_OF_WEEK.forEach((day) => {
+        const r = saved.selectedRecipes[day];
+        if (r == null) {
+          state.selectedRecipes[day] = null;
+        } else if (r && typeof r.name === 'string') {
+          state.selectedRecipes[day] = {
+            name: r.name,
+            ingredients: Array.isArray(r.ingredients) ? r.ingredients.map(String) : [],
+            instructions: Array.isArray(r.instructions) ? r.instructions.map(String) : [],
+          };
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('Could not load saved meal planner state:', e);
+  }
+}
+
+/**
+ * Saves current state (themes, portion size, selected recipes) to localStorage.
+ */
+function saveStateToStorage() {
+  try {
+    const payload = {
+      portionSize: state.portionSize,
+      themes: { ...state.themes },
+      selectedRecipes: { ...state.selectedRecipes },
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch (e) {
+    console.warn('Could not save meal planner state:', e);
+  }
+}
+
+/**
+ * Writes state back to the form inputs (e.g. after loading from localStorage).
+ */
+function syncStateToForm() {
+  const portionInput = document.getElementById('portion-size');
+  if (portionInput) portionInput.value = String(state.portionSize);
+  const themeIds = {
+    Monday: 'theme-monday',
+    Tuesday: 'theme-tuesday',
+    Wednesday: 'theme-wednesday',
+    Thursday: 'theme-thursday',
+    Friday: 'theme-friday',
+    Saturday: 'theme-saturday',
+    Sunday: 'theme-sunday',
+  };
+  DAYS_OF_WEEK.forEach((day) => {
+    const input = document.getElementById(themeIds[day]);
+    if (input) input.value = state.themes[day] || '';
+  });
+}
 
 /**
  * Reads the configuration form inputs and updates in-memory state.
@@ -335,6 +410,7 @@ function selectRecipeForDay(dayName, recipeIndex) {
   };
   closeRecipeModal();
   renderSelectedRecipesRow();
+  saveStateToStorage();
 }
 
 /**
@@ -364,6 +440,7 @@ function attachEventHandlers() {
       readFormIntoState();
       renderCalendar();
       renderSelectedRecipesRow();
+      saveStateToStorage();
     });
   }
 
@@ -416,6 +493,8 @@ function attachEventHandlers() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  loadStateFromStorage();
+  syncStateToForm();
   attachEventHandlers();
   renderCalendar();
   renderSelectedRecipesRow();
