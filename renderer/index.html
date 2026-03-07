@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Weekly Meal Planner Prototype</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-root">
+      <header class="app-header">
+        <h1>Weekly Meal Planner Prototype</h1>
+      </header>
+
+      <main class="app-main">
+        <section class="config-panel">
+          <h2>Configuration</h2>
+          <form id="config-form" class="config-form">
+            <div class="form-row">
+              <label for="portion-size">Portion size (number of servings)</label>
+              <input
+                id="portion-size"
+                name="portionSize"
+                type="number"
+                min="1"
+                step="1"
+                value="4"
+              />
+            </div>
+
+            <div class="themes-grid">
+              <div class="theme-row">
+                <label for="theme-monday">Monday theme</label>
+                <input id="theme-monday" name="monday" type="text" placeholder="Italian" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-tuesday">Tuesday theme</label>
+                <input id="theme-tuesday" name="tuesday" type="text" placeholder="Mexican" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-wednesday">Wednesday theme</label>
+                <input id="theme-wednesday" name="wednesday" type="text" placeholder="Slow Cooker" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-thursday">Thursday theme</label>
+                <input id="theme-thursday" name="thursday" type="text" placeholder="Healthy" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-friday">Friday theme</label>
+                <input id="theme-friday" name="friday" type="text" placeholder="Comfort Food" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-saturday">Saturday theme</label>
+                <input id="theme-saturday" name="saturday" type="text" placeholder="Grill" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-sunday">Sunday theme</label>
+                <input id="theme-sunday" name="sunday" type="text" placeholder="Leftovers" />
+              </div>
+            </div>
+
+            <button type="button" id="generate-btn" class="primary-button">
+              Generate Weekly Framework
+            </button>
+          </form>
+        </section>
+
+        <section class="calendar-panel">
+          <h2>Weekly Calendar</h2>
+          <div id="calendar-grid" class="calendar-grid">
+            <!-- Calendar cells are rendered by app.js -->
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+  </html>
+

@@ -2,7 +2,7 @@
   "name": "meal-planner-prototype",
   "version": "1.0.0",
   "description": "This is an interactive meal planning tool.",
-  "main": "electron-main.js",
+  "main": "main.js",
   "scripts": {
     "start": "electron ."
   },
