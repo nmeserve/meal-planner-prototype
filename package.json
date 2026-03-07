@@ -20,5 +20,9 @@
   "homepage": "https://github.com/nmeserve/meal-planner-prototype#readme",
   "devDependencies": {
     "electron": "^40.8.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "openai": "^4.73.0"
   }
 }

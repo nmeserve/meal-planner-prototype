@@ -70,22 +70,44 @@
           <div id="calendar-grid" class="calendar-grid">
             <!-- Calendar cells are rendered by app.js -->
           </div>
+          <h3 class="selected-recipes-heading">Selected recipe (per day)</h3>
+          <div id="selected-recipes-grid" class="calendar-grid selected-recipes-grid">
+            <!-- Selected recipe per day rendered by app.js; blank until a recipe is chosen -->
+          </div>
         </section>
       </main>
     </div>
 
-    <!-- Recipe popup modal -->
+    <!-- Recipe popup modal: two views = "pick" (choose 1 of 3) or "detail" (ingredients + instructions) -->
     <div id="recipe-modal" class="recipe-modal">
       <div class="recipe-modal-backdrop" id="recipe-modal-backdrop"></div>
       <div class="recipe-modal-box">
         <button type="button" class="recipe-modal-close" id="recipe-modal-close" aria-label="Close">×</button>
         <h2 class="recipe-modal-title" id="recipe-modal-title">MONDAY – ITALIAN</h2>
-        <ol class="recipe-modal-list" id="recipe-modal-list"></ol>
-        <button type="button" class="primary-button recipe-modal-roll" id="recipe-modal-roll">Roll Again</button>
+        <!-- Pick view: loading / error / 3 recipe options to select -->
+        <div id="recipe-modal-pick-view" class="recipe-modal-body">
+          <p class="recipe-modal-loading" id="recipe-modal-loading" hidden>Generating recipes...</p>
+          <p class="recipe-modal-error" id="recipe-modal-error" hidden>Could not generate recipes. Try again.</p>
+          <ul class="recipe-modal-list" id="recipe-modal-list" hidden></ul>
+        </div>
+        <!-- Detail view: ingredients + instructions for the locked-in recipe -->
+        <div id="recipe-modal-detail-view" class="recipe-modal-detail-body" hidden>
+          <h3 class="recipe-detail-section-title">Ingredients</h3>
+          <ul id="recipe-modal-ingredients" class="recipe-detail-list"></ul>
+          <h3 class="recipe-detail-section-title">Instructions</h3>
+          <ol id="recipe-modal-instructions" class="recipe-detail-list"></ol>
+        </div>
+        <div class="recipe-modal-actions" id="recipe-modal-actions-pick">
+          <button type="button" class="primary-button recipe-modal-roll" id="recipe-modal-roll">Roll Again</button>
+          <button type="button" class="secondary-button recipe-modal-close-btn" id="recipe-modal-close-btn">Close</button>
+        </div>
+        <div class="recipe-modal-actions" id="recipe-modal-actions-detail" hidden>
+          <button type="button" class="primary-button" id="recipe-modal-pick-different">Pick different recipe</button>
+          <button type="button" class="secondary-button recipe-modal-close-btn" id="recipe-modal-close-btn-detail">Close</button>
+        </div>
       </div>
     </div>
 
-    <script src="./recipeEngine.js"></script>
     <script src="./app.js"></script>
   </body>
   </html>

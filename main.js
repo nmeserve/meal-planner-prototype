@@ -1,8 +1,11 @@
 // Main Electron entry point for the Weekly Meal Planner Prototype.
 // This file owns application lifecycle and BrowserWindow setup.
+// Load environment variables first so OPENAI_API_KEY is available to aiRecipeService.
+require('dotenv').config();
 
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const { generateRecipes } = require('./aiRecipeService');
 
 /**
  * Creates the main application window and loads the renderer.
@@ -24,6 +27,17 @@ function createMainWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
+
+// IPC: renderer requests AI-generated recipes; main process calls OpenAI (API key never exposed).
+ipcMain.handle('generate-recipes', async (_event, category) => {
+  try {
+    const recipes = await generateRecipes(category);
+    return { ok: true, recipes };
+  } catch (err) {
+    console.error('generateRecipes failed:', err);
+    return { ok: false, error: err.message || 'Could not generate recipes.' };
+  }
+});
 
 // App lifecycle
 app.whenReady().then(() => {
