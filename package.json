@@ -1,0 +1,24 @@
+{
+  "name": "meal-planner-prototype",
+  "version": "1.0.0",
+  "description": "This is an interactive meal planning tool.",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nmeserve/meal-planner-prototype.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/nmeserve/meal-planner-prototype/issues"
+  },
+  "homepage": "https://github.com/nmeserve/meal-planner-prototype#readme",
+  "devDependencies": {
+    "electron": "^40.8.0"
+  }
+}
