@@ -74,6 +74,26 @@
           <div id="selected-recipes-grid" class="calendar-grid selected-recipes-grid">
             <!-- Selected recipe per day rendered by app.js; blank until a recipe is chosen -->
           </div>
+
+          <section class="grocery-section">
+            <h3 class="grocery-heading">Grocery list</h3>
+            <p class="grocery-hint subtle-text">Select 1–7 days to combine ingredients into one list.</p>
+            <div class="grocery-days-row" id="grocery-days-row">
+              <!-- Day checkboxes rendered by app.js -->
+            </div>
+            <div class="grocery-actions">
+              <div class="grocery-toggle-row">
+                <label class="grocery-toggle-label">
+                  <input type="checkbox" id="grocery-mode-uncommon" class="grocery-mode-toggle" />
+                  <span>Uncommon ingredients only (exclude pantry staples)</span>
+                </label>
+              </div>
+              <button type="button" class="primary-button" id="grocery-generate-btn" disabled>Generate grocery list</button>
+            </div>
+            <div id="grocery-list-links" class="grocery-list-links">
+              <!-- Clickable link "Grocery List Monday – Wednesday" rendered by app.js when list exists -->
+            </div>
+          </section>
         </section>
       </main>
     </div>
@@ -104,6 +124,23 @@
         <div class="recipe-modal-actions" id="recipe-modal-actions-detail" hidden>
           <button type="button" class="primary-button" id="recipe-modal-pick-different">Pick different recipe</button>
           <button type="button" class="secondary-button recipe-modal-close-btn" id="recipe-modal-close-btn-detail">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grocery list modal: card with list, Copy list, Clear list -->
+    <div id="grocery-list-modal" class="recipe-modal">
+      <div class="recipe-modal-backdrop" id="grocery-list-backdrop"></div>
+      <div class="recipe-modal-box grocery-list-modal-box">
+        <button type="button" class="recipe-modal-close" id="grocery-list-close" aria-label="Close">×</button>
+        <h2 class="recipe-modal-title" id="grocery-list-modal-title">Grocery list</h2>
+        <div class="grocery-list-card" id="grocery-list-card">
+          <p id="grocery-list-empty" class="grocery-list-empty" hidden>No list generated yet. Select days and click Generate grocery list.</p>
+          <ul id="grocery-list-items" class="grocery-list-items" hidden></ul>
+        </div>
+        <div class="recipe-modal-actions grocery-list-actions">
+          <button type="button" class="primary-button" id="grocery-list-copy">Copy list</button>
+          <button type="button" class="secondary-button" id="grocery-list-clear">Clear list</button>
         </div>
       </div>
     </div>

@@ -44,6 +44,12 @@ const state = {
     Saturday: null,
     Sunday: null,
   },
+  /** Generated grocery list: null or { dayNames: string[], items: { quantity, unit, name }[] } */
+  groceryList: null,
+  /** Which days are selected for the next grocery list generation (1–7). */
+  groceryListDays: new Set(),
+  /** 'full' = all ingredients, 'uncommon' = exclude pantry staples */
+  groceryListMode: 'full',
 };
 
 /** Full recipe objects for the current pick modal (so we can store the one the user selects). */
@@ -80,6 +86,19 @@ function loadStateFromStorage() {
         }
       });
     }
+    if (saved.groceryList && saved.groceryList.dayNames && Array.isArray(saved.groceryList.items)) {
+      state.groceryList = {
+        dayNames: saved.groceryList.dayNames.slice(),
+        items: saved.groceryList.items.map((it) => ({
+          quantity: it.quantity,
+          unit: typeof it.unit === 'string' ? it.unit : '',
+          name: typeof it.name === 'string' ? it.name : '',
+        })),
+      };
+    }
+    if (saved.groceryListMode === 'uncommon' || saved.groceryListMode === 'full') {
+      state.groceryListMode = saved.groceryListMode;
+    }
   } catch (e) {
     console.warn('Could not load saved meal planner state:', e);
   }
@@ -94,6 +113,8 @@ function saveStateToStorage() {
       portionSize: state.portionSize,
       themes: { ...state.themes },
       selectedRecipes: { ...state.selectedRecipes },
+      groceryList: state.groceryList,
+      groceryListMode: state.groceryListMode,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch (e) {
@@ -119,6 +140,247 @@ function syncStateToForm() {
   DAYS_OF_WEEK.forEach((day) => {
     const input = document.getElementById(themeIds[day]);
     if (input) input.value = state.themes[day] || '';
+  });
+}
+
+const COMMON_UNITS = new Set(['cup', 'cups', 'tbsp', 'tb', 'tsp', 'ts', 'lb', 'lbs', 'oz', 'g', 'kg', 'ml', 'l', 'clove', 'cloves', 'can', 'cans', 'bunch', 'pinch', 'slice', 'slices', 'stalk', 'stalks', 'piece', 'pieces', 'large', 'small', 'medium']);
+
+/** Pantry staples to exclude when "uncommon ingredients only" is selected. */
+const PANTRY_STAPLES = [
+  'flour', 'sugar', 'salt', 'black pepper', 'ground pepper', 'white pepper', 'garlic powder',
+  'onion powder', 'paprika', 'cumin', 'oregano', 'basil', 'thyme', 'cinnamon', 'nutmeg',
+  'vanilla extract', 'baking powder', 'baking soda', 'olive oil', 'vegetable oil', 'canola oil',
+  'butter', 'vinegar', 'soy sauce', 'ketchup', 'mustard', 'honey', 'maple syrup', 'cornstarch',
+  'water', 'cooking spray', 'bay leaf', 'bay leaves', 'red pepper flakes', 'worcestershire',
+  'hot sauce', 'sriracha', 'mayonnaise', 'breadcrumbs', 'rice', 'pasta', 'tomato paste',
+  'chicken broth', 'beef broth', 'stock',
+];
+
+function isPantryStaple(ingredientName) {
+  const lower = (ingredientName || '').toLowerCase();
+  return PANTRY_STAPLES.some((staple) => lower.includes(staple));
+}
+
+/** Formats day names for display: "Monday – Wednesday" for consecutive, or "Monday, Wednesday, Friday". */
+function formatDayRange(dayNames) {
+  if (!dayNames || dayNames.length === 0) return '';
+  const indices = dayNames.map((d) => DAYS_OF_WEEK.indexOf(d)).filter((i) => i >= 0).sort((a, b) => a - b);
+  if (indices.length === 0) return '';
+  const ordered = indices.map((i) => DAYS_OF_WEEK[i]);
+  const ranges = [];
+  let start = ordered[0];
+  let end = ordered[0];
+  for (let i = 1; i < ordered.length; i++) {
+    const curr = ordered[i];
+    const prevIdx = DAYS_OF_WEEK.indexOf(ordered[i - 1]);
+    if (DAYS_OF_WEEK.indexOf(curr) === prevIdx + 1) {
+      end = curr;
+    } else {
+      ranges.push(start === end ? start : `${start} – ${end}`);
+      start = end = curr;
+    }
+  }
+  ranges.push(start === end ? start : `${start} – ${end}`);
+  return ranges.join(', ');
+}
+
+function parseIngredientLine(line) {
+  const trimmed = (line || '').trim();
+  if (!trimmed) return null;
+  const withNumber = trimmed.match(/^([\d./]+)\s+(\S+)(?:\s+(.+))?$/);
+  if (withNumber) {
+    const numStr = withNumber[1];
+    const second = withNumber[2] || '';
+    const rest = (withNumber[3] || '').trim();
+    let quantity = parseFloat(numStr);
+    if (numStr.includes('/')) {
+      const [a, b] = numStr.split('/').map((s) => parseFloat(s.trim()));
+      if (!Number.isNaN(a) && !Number.isNaN(b) && b !== 0) quantity = a / b;
+    }
+    if (Number.isNaN(quantity)) quantity = 0;
+    const unitLower = second.toLowerCase();
+    if (COMMON_UNITS.has(unitLower) || second.length <= 3) {
+      const name = rest || second;
+      return { quantity, unit: second, name: name || trimmed };
+    }
+    return { quantity, unit: '', name: second + (rest ? ' ' + rest : '') };
+  }
+  return { quantity: 1, unit: '', name: trimmed };
+}
+
+function aggregateIngredients(parsedList) {
+  const map = new Map();
+  for (const it of parsedList) {
+    if (!it || !it.name) continue;
+    const key = `${(it.name || '').trim().toLowerCase()}|${(it.unit || '').trim().toLowerCase()}`;
+    const existing = map.get(key);
+    const q = typeof it.quantity === 'number' && !Number.isNaN(it.quantity) ? it.quantity : 0;
+    if (existing) {
+      existing.quantity += q;
+    } else {
+      map.set(key, {
+        quantity: q,
+        unit: it.unit || '',
+        name: (it.name || '').trim(),
+      });
+    }
+  }
+  const items = Array.from(map.values());
+  items.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  return items;
+}
+
+function generateGroceryList() {
+  const dayNames = Array.from(state.groceryListDays).filter((d) => DAYS_OF_WEEK.includes(d));
+  if (dayNames.length === 0 || dayNames.length > 7) return false;
+  const allLines = [];
+  dayNames.forEach((day) => {
+    const recipe = state.selectedRecipes[day];
+    if (recipe && Array.isArray(recipe.ingredients)) {
+      recipe.ingredients.forEach((line) => allLines.push(line));
+    }
+  });
+  const parsed = allLines.map(parseIngredientLine).filter(Boolean);
+  let items = aggregateIngredients(parsed);
+  if (state.groceryListMode === 'uncommon') {
+    items = items.filter((it) => !isPantryStaple(it.name));
+  }
+  state.groceryList = { dayNames, items };
+  saveStateToStorage();
+  return true;
+}
+
+function openGroceryListModal() {
+  const modal = document.getElementById('grocery-list-modal');
+  const titleEl = document.getElementById('grocery-list-modal-title');
+  const listEl = document.getElementById('grocery-list-items');
+  const emptyEl = document.getElementById('grocery-list-empty');
+  const copyBtn = document.getElementById('grocery-list-copy');
+  const clearBtn = document.getElementById('grocery-list-clear');
+  if (!modal) return;
+
+  if (titleEl && state.groceryList && state.groceryList.dayNames) {
+    titleEl.textContent = `Grocery List (${formatDayRange(state.groceryList.dayNames)})`;
+  }
+
+  if (state.groceryList && state.groceryList.items.length > 0) {
+    if (listEl) {
+      listEl.innerHTML = '';
+      listEl.hidden = false;
+      state.groceryList.items.forEach((it) => {
+        const li = document.createElement('li');
+        const q = typeof it.quantity === 'number' && it.quantity > 0 ? it.quantity : '';
+        const u = (it.unit || '').trim();
+        li.textContent = [q, u, it.name].filter(Boolean).join(' ');
+        listEl.appendChild(li);
+      });
+    }
+    if (emptyEl) emptyEl.hidden = true;
+    if (copyBtn) copyBtn.disabled = false;
+    if (clearBtn) clearBtn.disabled = false;
+  } else {
+    if (listEl) listEl.hidden = true;
+    if (emptyEl) {
+      emptyEl.hidden = false;
+      emptyEl.textContent = state.groceryList && state.groceryList.dayNames && state.groceryList.dayNames.length > 0
+        ? 'No ingredients found for the selected days.'
+        : 'No list generated yet. Select days and click Generate grocery list.';
+    }
+    if (copyBtn) copyBtn.disabled = true;
+    if (clearBtn) clearBtn.disabled = state.groceryList == null;
+  }
+  modal.classList.add('recipe-modal-open');
+}
+
+function closeGroceryListModal() {
+  const modal = document.getElementById('grocery-list-modal');
+  if (modal) modal.classList.remove('recipe-modal-open');
+}
+
+function copyGroceryListToClipboard() {
+  if (!state.groceryList || !state.groceryList.items.length) return;
+  const lines = state.groceryList.items.map((it) => {
+    const q = typeof it.quantity === 'number' && it.quantity > 0 ? it.quantity : '';
+    const u = (it.unit || '').trim();
+    return [q, u, it.name].filter(Boolean).join(' ');
+  });
+  const text = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  }
+}
+
+function clearGroceryList() {
+  state.groceryList = null;
+  saveStateToStorage();
+  closeGroceryListModal();
+  updateGroceryListButtons();
+}
+
+function updateGroceryListButtons() {
+  const count = state.groceryListDays.size;
+  const generateBtn = document.getElementById('grocery-generate-btn');
+  if (generateBtn) generateBtn.disabled = count < 1 || count > 7;
+  renderGroceryListLinks();
+}
+
+/**
+ * Renders the clickable link "Grocery List Monday – Wednesday" when a list exists.
+ */
+function renderGroceryListLinks() {
+  const container = document.getElementById('grocery-list-links');
+  if (!container) return;
+  container.innerHTML = '';
+  if (state.groceryList && state.groceryList.dayNames && state.groceryList.dayNames.length > 0) {
+    const label = formatDayRange(state.groceryList.dayNames);
+    const link = document.createElement('button');
+    link.type = 'button';
+    link.className = 'grocery-list-link';
+    link.textContent = `Grocery List ${label}`;
+    link.addEventListener('click', openGroceryListModal);
+    container.appendChild(link);
+  }
+}
+
+function toggleGroceryDay(dayName) {
+  if (state.groceryListDays.has(dayName)) {
+    state.groceryListDays.delete(dayName);
+  } else {
+    if (state.groceryListDays.size >= 7) {
+      const cb = document.getElementById(`grocery-day-${dayName.toLowerCase()}`);
+      if (cb) cb.checked = false;
+      updateGroceryListButtons();
+      return;
+    }
+    state.groceryListDays.add(dayName);
+  }
+  const cb = document.getElementById(`grocery-day-${dayName.toLowerCase()}`);
+  if (cb) cb.checked = state.groceryListDays.has(dayName);
+  updateGroceryListButtons();
+}
+
+/**
+ * Renders the row of day checkboxes for grocery list selection.
+ */
+function renderGroceryDaysRow() {
+  const row = document.getElementById('grocery-days-row');
+  if (!row) return;
+  row.innerHTML = '';
+  const short = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  DAYS_OF_WEEK.forEach((dayName, i) => {
+    const label = document.createElement('label');
+    label.className = 'grocery-day-label';
+    const id = `grocery-day-${dayName.toLowerCase()}`;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = id;
+    cb.className = 'grocery-day-cb';
+    cb.dataset.day = dayName;
+    cb.checked = state.groceryListDays.has(dayName);
+    cb.addEventListener('change', () => toggleGroceryDay(dayName));
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(' ' + short[i]));
+    row.appendChild(label);
   });
 }
 
@@ -490,6 +752,29 @@ function attachEventHandlers() {
       }
     });
   }
+
+  // Grocery list: generate, toggle, close, copy, clear
+  const groceryGenerateBtn = document.getElementById('grocery-generate-btn');
+  if (groceryGenerateBtn) {
+    groceryGenerateBtn.addEventListener('click', () => {
+      if (generateGroceryList()) {
+        openGroceryListModal();
+        updateGroceryListButtons();
+      }
+    });
+  }
+  const groceryModeToggle = document.getElementById('grocery-mode-uncommon');
+  if (groceryModeToggle) {
+    groceryModeToggle.checked = state.groceryListMode === 'uncommon';
+    groceryModeToggle.addEventListener('change', () => {
+      state.groceryListMode = groceryModeToggle.checked ? 'uncommon' : 'full';
+      saveStateToStorage();
+    });
+  }
+  document.getElementById('grocery-list-close')?.addEventListener('click', closeGroceryListModal);
+  document.getElementById('grocery-list-backdrop')?.addEventListener('click', closeGroceryListModal);
+  document.getElementById('grocery-list-copy')?.addEventListener('click', copyGroceryListToClipboard);
+  document.getElementById('grocery-list-clear')?.addEventListener('click', clearGroceryList);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -498,5 +783,7 @@ window.addEventListener('DOMContentLoaded', () => {
   attachEventHandlers();
   renderCalendar();
   renderSelectedRecipesRow();
+  renderGroceryDaysRow();
+  updateGroceryListButtons();
 });
 

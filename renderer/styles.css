@@ -334,6 +334,128 @@ body {
   border-color: rgba(148, 163, 184, 0.7);
 }
 
+/* Grocery list section */
+.grocery-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.grocery-heading {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.grocery-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+}
+
+.grocery-days-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.grocery-day-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #cbd5f5;
+}
+
+.grocery-day-cb {
+  accent-color: #22c55e;
+}
+
+.grocery-toggle-row {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.grocery-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #cbd5f5;
+  cursor: pointer;
+}
+
+.grocery-mode-toggle {
+  accent-color: #22c55e;
+}
+
+.grocery-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.grocery-list-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grocery-list-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #22c55e;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.grocery-list-link:hover {
+  color: #4ade80;
+}
+
+/* Grocery list modal – card container */
+.grocery-list-modal-box {
+  max-width: 440px;
+}
+
+.grocery-list-card {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.grocery-list-empty {
+  margin: 0;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.grocery-list-items {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.grocery-list-items li {
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.grocery-list-actions {
+  display: flex;
+  gap: 10px;
+}
+
 @media (max-width: 960px) {
   .app-main {
     grid-template-columns: minmax(0, 1fr);
