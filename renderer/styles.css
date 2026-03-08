@@ -1,0 +1,346 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+.app-root {
+  min-height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 32px;
+}
+
+.app-header {
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.app-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr);
+  gap: 24px;
+}
+
+.config-panel,
+.calendar-panel {
+  background: #020617;
+  border-radius: 16px;
+  padding: 16px 18px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.config-panel h2,
+.calendar-panel h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-row label {
+  font-size: 13px;
+  color: #cbd5f5;
+}
+
+.form-row input[type='number'],
+.theme-row input[type='text'] {
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: #020617;
+  color: #e5e7eb;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.form-row input:focus,
+.theme-row input:focus {
+  outline: none;
+  border-color: #22c55e;
+}
+
+.themes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.theme-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.theme-row label {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.primary-button {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #ecfdf3;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 10px 18px rgba(34, 197, 94, 0.45);
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out, filter 150ms ease-out;
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(34, 197, 94, 0.55);
+  filter: brightness(1.05);
+}
+
+.primary-button:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 16px rgba(34, 197, 94, 0.4);
+}
+
+.calendar-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-cell {
+  border-radius: 10px;
+  padding: 10px 8px;
+  background: #020617;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-cell-clickable {
+  cursor: pointer;
+}
+
+.calendar-cell-clickable:hover {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.calendar-day-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.calendar-theme-label {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Recipe popup modal – hidden by default, shown when .recipe-modal-open is set */
+.recipe-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.recipe-modal.recipe-modal-open {
+  display: flex;
+}
+
+.recipe-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.recipe-modal-box {
+  position: relative;
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 16px;
+  padding: 20px 24px 24px;
+  min-width: 280px;
+  max-width: 420px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.recipe-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.recipe-modal-close:hover {
+  color: #e5e7eb;
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.recipe-modal-title {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.recipe-modal-body {
+  margin-bottom: 16px;
+  min-height: 60px;
+}
+
+.recipe-modal-loading {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.recipe-modal-error {
+  margin: 0;
+  color: #f87171;
+  font-size: 14px;
+}
+
+.recipe-modal-list {
+  margin: 0;
+  padding-left: 20px;
+  list-style: none;
+  padding-left: 0;
+}
+
+.recipe-modal-list li {
+  margin-bottom: 6px;
+}
+
+.recipe-modal-list-item {
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.recipe-modal-list-item:hover {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.selected-recipes-heading {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.selected-recipes-grid {
+  margin-top: 0;
+}
+
+.selected-recipe-cell {
+  min-height: 50px;
+}
+
+.selected-recipe-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recipe-modal-detail-body {
+  margin-bottom: 16px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.recipe-detail-section-title {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.recipe-detail-section-title:first-child {
+  margin-top: 0;
+}
+
+.recipe-detail-list {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.recipe-detail-list li {
+  margin-bottom: 4px;
+}
+
+.recipe-modal-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.recipe-modal-roll {
+  margin: 0;
+}
+
+.secondary-button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(148, 163, 184, 0.7);
+}
+
+@media (max-width: 960px) {
+  .app-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
