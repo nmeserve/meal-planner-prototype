@@ -18,9 +18,66 @@ body {
   padding: 24px 16px 32px;
 }
 
+/* Page switching: only the active page is visible */
+.page {
+  display: none;
+  width: 100%;
+}
+
+.page.page-active {
+  display: block;
+}
+
+.app-main.app-main-single {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.app-main.app-main-single .config-panel {
+  width: 100%;
+}
+
+.config-panel-standalone {
+  width: 100%;
+  min-width: 0;
+}
+
 .app-header {
   margin-bottom: 16px;
   text-align: center;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.app-header-with-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.back-button {
+  position: absolute;
+  left: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.back-button:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(148, 163, 184, 0.7);
 }
 
 .app-header h1 {
@@ -33,6 +90,19 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr);
   gap: 24px;
+  width: 100%;
+  max-width: 1200px;
+  min-width: 0;
+}
+
+.app-main-calendar {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+.app-main-calendar .calendar-panel {
+  width: 100%;
+  max-width: 1200px;
 }
 
 .config-panel,
@@ -41,6 +111,8 @@ body {
   border-radius: 16px;
   padding: 16px 18px 18px;
   border: 1px solid rgba(148, 163, 184, 0.5);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .config-panel h2,
@@ -49,6 +121,12 @@ body {
   margin-bottom: 10px;
   font-size: 18px;
   font-weight: 600;
+}
+
+.config-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .config-form {
@@ -66,6 +144,8 @@ body {
 .form-row label {
   font-size: 13px;
   color: #cbd5f5;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .form-row input[type='number'],
@@ -76,10 +156,266 @@ body {
   color: #e5e7eb;
   padding: 6px 8px;
   font-size: 14px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-row input:focus,
 .theme-row input:focus {
+  outline: none;
+  border-color: #22c55e;
+}
+
+.leftovers-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #cbd5f5;
+  cursor: pointer;
+}
+
+.leftovers-checkbox-label input {
+  accent-color: #22c55e;
+}
+
+.allergies-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.allergies-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #cbd5f5;
+  cursor: pointer;
+}
+
+.allergies-radio-label input {
+  accent-color: #22c55e;
+}
+
+.allergies-configure-btn {
+  margin-left: 8px;
+}
+
+.meal-plan-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meal-plan-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #cbd5f5;
+  cursor: pointer;
+}
+
+.meal-plan-option input {
+  accent-color: #22c55e;
+}
+
+.daily-themes-section {
+  margin-top: 4px;
+}
+
+.day-by-day-mood-section {
+  margin-top: 4px;
+}
+
+/* Day-by-day "Today" page: centered, expanded layout */
+#page-day-today .app-main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+#page-day-today .day-today-panel {
+  width: 100%;
+  max-width: 640px;
+  min-width: 400px;
+  margin: 0 auto;
+  padding: 24px 28px 28px;
+  align-self: center;
+  overflow: visible;
+}
+
+.day-today-panel .day-today-category {
+  font-size: 22px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.day-today-panel .day-today-single,
+.day-today-panel #day-today-grid,
+.day-today-panel #day-today-selected-grid {
+  grid-template-columns: 1fr;
+  max-width: none;
+  width: 100%;
+  min-width: 0;
+  justify-items: stretch;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.day-today-panel .calendar-cell {
+  padding: 24px 28px;
+  min-width: 0;
+  overflow: visible;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.day-today-panel .calendar-cell .calendar-day-label,
+.day-today-panel .calendar-cell .calendar-theme-label {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.day-today-panel .calendar-day-label {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.day-today-panel .calendar-theme-label {
+  font-size: 17px;
+  color: #9ca3af;
+}
+
+.day-today-panel .selected-recipes-heading {
+  font-size: 17px;
+  margin: 24px 0 12px;
+}
+
+.day-today-panel .selected-recipe-cell {
+  min-width: 0;
+  overflow: visible;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 24px 28px;
+}
+
+.day-today-panel .selected-recipe-cell .selected-recipe-label {
+  font-size: 18px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.day-today-panel .selected-recipe-cell .calendar-theme-label {
+  font-size: 15px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.day-today-panel .grocery-section {
+  margin-top: 28px;
+  padding-top: 24px;
+}
+
+.day-today-panel .grocery-heading {
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+
+.day-today-panel .grocery-hint {
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+
+.day-today-panel .grocery-toggle-label {
+  font-size: 15px;
+}
+
+.day-today-panel .grocery-day-label {
+  font-size: 15px;
+}
+
+.day-today-panel .primary-button,
+.day-today-panel .secondary-button {
+  font-size: 15px;
+  padding: 10px 18px;
+}
+
+#page-day-today .app-header h1 {
+  font-size: 28px;
+}
+
+.day-today-panel .grocery-list-link {
+  font-size: 16px;
+}
+
+.allergies-modal-box {
+  max-width: 420px;
+}
+
+.allergies-modal-hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.allergies-checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+}
+
+.allergies-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+.allergies-checkbox-item input {
+  accent-color: #22c55e;
+}
+
+.allergies-other-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.allergies-other-row label {
+  font-size: 13px;
+  color: #cbd5f5;
+}
+
+.allergies-other-row input {
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: #020617;
+  color: #e5e7eb;
+  padding: 8px 10px;
+  font-size: 14px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.allergies-other-row input:focus {
   outline: none;
   border-color: #22c55e;
 }
@@ -94,11 +430,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .theme-row label {
   font-size: 12px;
   color: #9ca3af;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .primary-button {
@@ -144,6 +483,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .calendar-cell-clickable {
@@ -158,11 +499,15 @@ body {
 .calendar-day-label {
   font-size: 13px;
   font-weight: 600;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .calendar-theme-label {
   font-size: 12px;
   color: #9ca3af;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Recipe popup modal – hidden by default, shown when .recipe-modal-open is set */
@@ -257,6 +602,8 @@ body {
   padding: 8px 10px;
   border-radius: 8px;
   transition: background 0.15s ease;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .recipe-modal-list-item:hover {
@@ -276,11 +623,15 @@ body {
 
 .selected-recipe-cell {
   min-height: 50px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .selected-recipe-label {
   font-size: 13px;
   font-weight: 600;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .recipe-modal-detail-body {
@@ -351,6 +702,8 @@ body {
 .grocery-hint {
   margin: 0 0 10px;
   font-size: 12px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .grocery-days-row {
@@ -367,6 +720,8 @@ body {
   font-size: 13px;
   cursor: pointer;
   color: #cbd5f5;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .grocery-day-cb {
@@ -385,6 +740,8 @@ body {
   font-size: 13px;
   color: #cbd5f5;
   cursor: pointer;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .grocery-mode-toggle {

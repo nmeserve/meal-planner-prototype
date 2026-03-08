@@ -29,9 +29,9 @@ function createMainWindow() {
 }
 
 // IPC: renderer requests AI-generated recipes; main process calls OpenAI (API key never exposed).
-ipcMain.handle('generate-recipes', async (_event, category) => {
+ipcMain.handle('generate-recipes', async (_event, category, allergies, portionSize) => {
   try {
-    const recipes = await generateRecipes(category);
+    const recipes = await generateRecipes(category, allergies || [], portionSize);
     return { ok: true, recipes };
   } catch (err) {
     console.error('generateRecipes failed:', err);

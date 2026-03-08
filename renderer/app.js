@@ -19,12 +19,56 @@ const DAYS_OF_WEEK = [
 
 const STORAGE_KEY = 'mealPlanner.weeklyState';
 
+const PAGE_CONFIG = 'page-config';
+const PAGE_CALENDAR = 'page-calendar';
+const PAGE_DAY_TODAY = 'page-day-today';
+
+/**
+ * Switches the visible page. Only one page is active at a time.
+ */
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach((el) => el.classList.remove('page-active'));
+  const page = document.getElementById(pageId);
+  if (page) page.classList.add('page-active');
+}
+
 /**
  * Minimal state holder for this prototype.
  * Later, additional fields can be added (recipes, ingredients, etc.).
  */
+/** Common allergens for the allergies modal. */
+const COMMON_ALLERGIES = [
+  'Peanuts',
+  'Tree nuts (almonds, cashews, walnuts, etc.)',
+  'Shellfish (shrimp, crab, lobster)',
+  'Fish',
+  'Milk / Dairy',
+  'Eggs',
+  'Wheat / Gluten',
+  'Soy',
+  'Sesame',
+];
+
+/** Meal plan mode: 'fullWeek' | 'fewMeals' | 'dayByDay' | 'bulkCooking' */
+const MEAL_PLAN_FULL_WEEK = 'fullWeek';
+const MEAL_PLAN_DAY_BY_DAY = 'dayByDay';
+
+/**
+ * Returns the current day name (e.g. "Monday") for day-by-day mode.
+ */
+function getCurrentDayName() {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[new Date().getDay()];
+}
+
 const state = {
   portionSize: 4,
+  /** When true, double portion size for leftovers (e.g. 4 → 8 servings) */
+  makeExtraForLeftovers: false,
+  /** { hasAllergies: boolean, items: string[] } – items = selected from list + other free text */
+  allergies: { hasAllergies: false, items: [] },
+  /** 'fullWeek' | 'fewMeals' | 'dayByDay' | 'bulkCooking' – controls whether daily themes are shown */
+  mealPlanMode: MEAL_PLAN_FULL_WEEK,
   themes: {
     Monday: '',
     Tuesday: '',
@@ -66,6 +110,18 @@ function loadStateFromStorage() {
     const saved = JSON.parse(raw);
     if (saved.portionSize != null && Number(saved.portionSize) > 0) {
       state.portionSize = Number(saved.portionSize);
+    }
+    if (saved.makeExtraForLeftovers != null) {
+      state.makeExtraForLeftovers = Boolean(saved.makeExtraForLeftovers);
+    }
+    if (saved.allergies && typeof saved.allergies === 'object') {
+      state.allergies = {
+        hasAllergies: Boolean(saved.allergies.hasAllergies),
+        items: Array.isArray(saved.allergies.items) ? saved.allergies.items.map(String) : [],
+      };
+    }
+    if (saved.mealPlanMode === 'fullWeek' || saved.mealPlanMode === 'fewMeals' || saved.mealPlanMode === 'dayByDay' || saved.mealPlanMode === 'bulkCooking') {
+      state.mealPlanMode = saved.mealPlanMode;
     }
     if (saved.themes && typeof saved.themes === 'object') {
       DAYS_OF_WEEK.forEach((day) => {
@@ -111,6 +167,9 @@ function saveStateToStorage() {
   try {
     const payload = {
       portionSize: state.portionSize,
+      makeExtraForLeftovers: state.makeExtraForLeftovers,
+      allergies: { ...state.allergies },
+      mealPlanMode: state.mealPlanMode,
       themes: { ...state.themes },
       selectedRecipes: { ...state.selectedRecipes },
       groceryList: state.groceryList,
@@ -125,9 +184,133 @@ function saveStateToStorage() {
 /**
  * Writes state back to the form inputs (e.g. after loading from localStorage).
  */
+/**
+ * Returns the effective portion size: doubles household size when "make extra for leftovers" is checked.
+ */
+function getEffectivePortionSize() {
+  const base = state.portionSize || 1;
+  return state.makeExtraForLeftovers ? base * 2 : base;
+}
+
+/**
+ * Returns the current list of allergy items to pass to the AI (selected + other free text).
+ */
+function getAllergyItems() {
+  if (!state.allergies.hasAllergies || !state.allergies.items.length) return [];
+  return state.allergies.items.filter((s) => (s || '').trim().length > 0);
+}
+
+/**
+ * Renders the allergies checkbox list in the modal.
+ */
+function renderAllergiesCheckboxList() {
+  const container = document.getElementById('allergies-checkbox-list');
+  if (!container) return;
+  container.innerHTML = '';
+  COMMON_ALLERGIES.forEach((allergen) => {
+    const label = document.createElement('label');
+    label.className = 'allergies-checkbox-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.allergen = allergen;
+    cb.checked = state.allergies.items.includes(allergen);
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(allergen));
+    label.addEventListener('click', (e) => {
+      if (e.target !== cb) cb.checked = !cb.checked;
+    });
+    container.appendChild(label);
+  });
+}
+
+function openAllergiesModal() {
+  renderAllergiesCheckboxList();
+  const otherInput = document.getElementById('allergies-other-input');
+  if (otherInput) {
+    const otherItems = state.allergies.items.filter((a) => !COMMON_ALLERGIES.includes(a));
+    otherInput.value = otherItems.join(', ');
+  }
+  const modal = document.getElementById('allergies-modal');
+  if (modal) modal.classList.add('recipe-modal-open');
+}
+
+function closeAllergiesModal() {
+  const modal = document.getElementById('allergies-modal');
+  if (modal) modal.classList.remove('recipe-modal-open');
+}
+
+function saveAllergiesFromModal() {
+  const items = [];
+  document.querySelectorAll('#allergies-checkbox-list input[type="checkbox"]:checked').forEach((cb) => {
+    const a = (cb.dataset.allergen || '').trim();
+    if (a) items.push(a);
+  });
+  const otherInput = document.getElementById('allergies-other-input');
+  if (otherInput) {
+    const otherText = (otherInput.value || '').trim();
+    if (otherText) {
+      otherText.split(/[,;]/).forEach((s) => {
+        const t = s.trim();
+        if (t) items.push(t);
+      });
+    }
+  }
+  state.allergies.items = items;
+  state.allergies.hasAllergies = items.length > 0;
+  saveStateToStorage();
+  closeAllergiesModal();
+  syncStateToForm();
+}
+
+/**
+ * Shows or hides the daily themes section based on meal plan mode.
+ */
+function updateDailyThemesVisibility() {
+  const section = document.getElementById('daily-themes-section');
+  if (!section) return;
+  section.hidden = state.mealPlanMode !== MEAL_PLAN_FULL_WEEK;
+}
+
+/**
+ * Shows or hides the "what are you in the mood for today" section when dayByDay is selected.
+ */
+function updateDayByDaySectionVisibility() {
+  const section = document.getElementById('day-by-day-mood-section');
+  if (!section) return;
+  section.hidden = state.mealPlanMode !== MEAL_PLAN_DAY_BY_DAY;
+}
+
 function syncStateToForm() {
   const portionInput = document.getElementById('portion-size');
   if (portionInput) portionInput.value = String(state.portionSize);
+
+  const leftoversCb = document.getElementById('make-extra-leftovers');
+  if (leftoversCb) leftoversCb.checked = state.makeExtraForLeftovers;
+
+  const allergiesNo = document.getElementById('allergies-no');
+  const allergiesYes = document.getElementById('allergies-yes');
+  const configureBtn = document.getElementById('allergies-configure-btn');
+  if (allergiesNo) allergiesNo.checked = !state.allergies.hasAllergies;
+  if (allergiesYes) allergiesYes.checked = state.allergies.hasAllergies;
+  if (configureBtn) configureBtn.hidden = !state.allergies.hasAllergies;
+
+  const fullWeekRadio = document.querySelector('input[name="meal-plan-mode"][value="fullWeek"]');
+  const fewMealsRadio = document.querySelector('input[name="meal-plan-mode"][value="fewMeals"]');
+  const dayByDayRadio = document.querySelector('input[name="meal-plan-mode"][value="dayByDay"]');
+  const bulkCookingRadio = document.querySelector('input[name="meal-plan-mode"][value="bulkCooking"]');
+  if (fullWeekRadio) fullWeekRadio.checked = state.mealPlanMode === 'fullWeek';
+  if (fewMealsRadio) fewMealsRadio.checked = state.mealPlanMode === 'fewMeals';
+  if (dayByDayRadio) dayByDayRadio.checked = state.mealPlanMode === 'dayByDay';
+  if (bulkCookingRadio) bulkCookingRadio.checked = state.mealPlanMode === 'bulkCooking';
+  updateDailyThemesVisibility();
+  updateDayByDaySectionVisibility();
+
+  const todayMoodInput = document.getElementById('today-mood-input');
+  if (todayMoodInput) {
+    const today = getCurrentDayName();
+    todayMoodInput.value = state.themes[today] || '';
+  }
+
   const themeIds = {
     Monday: 'theme-monday',
     Tuesday: 'theme-tuesday',
@@ -315,6 +498,7 @@ function clearGroceryList() {
   saveStateToStorage();
   closeGroceryListModal();
   updateGroceryListButtons();
+  updateDayTodayGroceryButtons();
 }
 
 function updateGroceryListButtons() {
@@ -322,6 +506,7 @@ function updateGroceryListButtons() {
   const generateBtn = document.getElementById('grocery-generate-btn');
   if (generateBtn) generateBtn.disabled = count < 1 || count > 7;
   renderGroceryListLinks();
+  renderDayTodayGroceryListLinks();
 }
 
 /**
@@ -356,7 +541,10 @@ function toggleGroceryDay(dayName) {
   }
   const cb = document.getElementById(`grocery-day-${dayName.toLowerCase()}`);
   if (cb) cb.checked = state.groceryListDays.has(dayName);
+  const dayTodayCb = document.querySelector('#day-today-grocery-days-row input[data-day]');
+  if (dayTodayCb && dayTodayCb.dataset.day === dayName) dayTodayCb.checked = state.groceryListDays.has(dayName);
   updateGroceryListButtons();
+  updateDayTodayGroceryButtons();
 }
 
 /**
@@ -393,6 +581,9 @@ function readFormIntoState() {
   const portionValue = parseInt(portionInput.value, 10);
   state.portionSize = Number.isNaN(portionValue) || portionValue <= 0 ? 1 : portionValue;
 
+  const leftoversCb = document.getElementById('make-extra-leftovers');
+  state.makeExtraForLeftovers = leftoversCb ? leftoversCb.checked : false;
+
   const themeInputs = {
     Monday: document.getElementById('theme-monday'),
     Tuesday: document.getElementById('theme-tuesday'),
@@ -407,6 +598,20 @@ function readFormIntoState() {
     const input = themeInputs[dayName];
     state.themes[dayName] = input ? input.value.trim() : '';
   });
+
+  const allergiesNo = document.getElementById('allergies-no');
+  state.allergies.hasAllergies = allergiesNo ? !allergiesNo.checked : false;
+
+  const mealPlanChecked = document.querySelector('input[name="meal-plan-mode"]:checked');
+  if (mealPlanChecked && (mealPlanChecked.value === 'fullWeek' || mealPlanChecked.value === 'fewMeals' || mealPlanChecked.value === 'dayByDay' || mealPlanChecked.value === 'bulkCooking')) {
+    state.mealPlanMode = mealPlanChecked.value;
+  }
+
+  if (state.mealPlanMode === MEAL_PLAN_DAY_BY_DAY) {
+    const todayMoodInput = document.getElementById('today-mood-input');
+    const today = getCurrentDayName();
+    if (todayMoodInput) state.themes[today] = (todayMoodInput.value || '').trim();
+  }
 }
 
 /**
@@ -438,6 +643,97 @@ function renderCalendar() {
     cell.appendChild(themeLabel);
     grid.appendChild(cell);
   });
+}
+
+/**
+ * Renders the day-by-day "Today" page: category, single day cell, selected recipe, grocery row.
+ */
+function renderDayTodayPage() {
+  const today = getCurrentDayName();
+  const category = (state.themes[today] || '').trim();
+
+  const categoryEl = document.getElementById('day-today-category');
+  if (categoryEl) categoryEl.textContent = category || '(no category)';
+
+  const grid = document.getElementById('day-today-grid');
+  if (grid) {
+    grid.innerHTML = '';
+    const cell = document.createElement('div');
+    cell.className = 'calendar-cell calendar-cell-clickable';
+    cell.dataset.day = today;
+    const dayLabel = document.createElement('div');
+    dayLabel.className = 'calendar-day-label';
+    dayLabel.textContent = 'Today';
+    const themeLabel = document.createElement('div');
+    themeLabel.className = 'calendar-theme-label';
+    themeLabel.textContent = category ? category : 'Click to pick a recipe';
+    cell.appendChild(dayLabel);
+    cell.appendChild(themeLabel);
+    grid.appendChild(cell);
+  }
+
+  const selectedGrid = document.getElementById('day-today-selected-grid');
+  if (selectedGrid) {
+    selectedGrid.innerHTML = '';
+    const cell = document.createElement('div');
+    cell.className = 'calendar-cell calendar-cell-clickable selected-recipe-cell';
+    cell.dataset.day = today;
+    const recipe = state.selectedRecipes[today];
+    const label = document.createElement('div');
+    label.className = 'selected-recipe-label';
+    label.textContent = recipe ? recipe.name : '—';
+    const sub = document.createElement('div');
+    sub.className = 'calendar-theme-label';
+    sub.textContent = recipe ? 'Click to view details' : 'No recipe selected';
+    cell.appendChild(label);
+    cell.appendChild(sub);
+    selectedGrid.appendChild(cell);
+  }
+
+  renderDayTodayGroceryDaysRow();
+  updateDayTodayGroceryButtons();
+}
+
+function renderDayTodayGroceryDaysRow() {
+  const row = document.getElementById('day-today-grocery-days-row');
+  if (!row) return;
+  row.innerHTML = '';
+  const today = getCurrentDayName();
+  const label = document.createElement('label');
+  label.className = 'grocery-day-label';
+  const id = 'day-today-grocery-day';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.id = id;
+  cb.className = 'grocery-day-cb';
+  cb.dataset.day = today;
+  cb.checked = state.groceryListDays.has(today);
+  cb.addEventListener('change', () => toggleGroceryDay(today));
+  label.appendChild(cb);
+  label.appendChild(document.createTextNode(' Today'));
+  row.appendChild(label);
+}
+
+function updateDayTodayGroceryButtons() {
+  const today = getCurrentDayName();
+  const count = state.groceryListDays.has(today) ? 1 : 0;
+  const generateBtn = document.getElementById('day-today-grocery-generate-btn');
+  if (generateBtn) generateBtn.disabled = count < 1;
+  renderDayTodayGroceryListLinks();
+}
+
+function renderDayTodayGroceryListLinks() {
+  const container = document.getElementById('day-today-grocery-list-links');
+  if (!container) return;
+  container.innerHTML = '';
+  if (state.groceryList && state.groceryList.dayNames && state.groceryList.dayNames.length > 0) {
+    const link = document.createElement('button');
+    link.type = 'button';
+    link.className = 'grocery-list-link';
+    link.textContent = 'Grocery List (Today)';
+    link.addEventListener('click', openGroceryListModal);
+    container.appendChild(link);
+  }
 }
 
 /**
@@ -473,6 +769,7 @@ function renderSelectedRecipesRow() {
  * Returns true if every day of the week has a non-empty theme in state.
  */
 function allThemesFilled() {
+  if (state.mealPlanMode !== MEAL_PLAN_FULL_WEEK) return true;
   return DAYS_OF_WEEK.every((day) => (state.themes[day] || '').trim() !== '');
 }
 
@@ -487,7 +784,7 @@ function openRecipeModal(dayName) {
   readFormIntoState();
 
   if (!allThemesFilled()) {
-    alert('Please fill in a theme for every day of the week and click "Generate Weekly Framework" first.');
+    alert('Please fill in a category for every day of the week and click "SAVE" first.');
     return;
   }
 
@@ -571,8 +868,10 @@ async function openRecipePicker(dayName) {
   listEl.hidden = true;
   modal.classList.add('recipe-modal-open');
 
+  const allergies = getAllergyItems();
+  const portionSize = getEffectivePortionSize();
   const result = await (window.mealAPI && typeof window.mealAPI.generateRecipes === 'function'
-    ? window.mealAPI.generateRecipes(category)
+    ? window.mealAPI.generateRecipes(category, allergies, portionSize)
     : Promise.resolve({ ok: false, error: 'API not available' }));
 
   if (result.ok && Array.isArray(result.recipes) && result.recipes.length > 0) {
@@ -646,8 +945,10 @@ async function rollAgainInModal() {
 
   showModalLoading(loadingEl, errorEl, listEl);
 
+  const allergies = getAllergyItems();
+  const portionSize = getEffectivePortionSize();
   const result = await (window.mealAPI && typeof window.mealAPI.generateRecipes === 'function'
-    ? window.mealAPI.generateRecipes(category)
+    ? window.mealAPI.generateRecipes(category, allergies, portionSize)
     : Promise.resolve({ ok: false, error: 'API not available' }));
 
   if (result.ok && Array.isArray(result.recipes) && result.recipes.length > 0) {
@@ -672,6 +973,7 @@ function selectRecipeForDay(dayName, recipeIndex) {
   };
   closeRecipeModal();
   renderSelectedRecipesRow();
+  renderDayTodayPage();
   saveStateToStorage();
 }
 
@@ -700,9 +1002,102 @@ function attachEventHandlers() {
   if (generateButton) {
     generateButton.addEventListener('click', () => {
       readFormIntoState();
-      renderCalendar();
-      renderSelectedRecipesRow();
-      saveStateToStorage();
+      if (state.mealPlanMode === MEAL_PLAN_DAY_BY_DAY) {
+        const today = getCurrentDayName();
+        const mood = (state.themes[today] || '').trim();
+        if (!mood) {
+          alert('Please enter what you\'re in the mood for today.');
+          return;
+        }
+        renderDayTodayPage();
+        saveStateToStorage();
+        showPage(PAGE_DAY_TODAY);
+      } else {
+        renderCalendar();
+        renderSelectedRecipesRow();
+        saveStateToStorage();
+        showPage(PAGE_CALENDAR);
+      }
+    });
+  }
+
+  const skipButton = document.getElementById('skip-to-calendar-btn');
+  if (skipButton) {
+    skipButton.addEventListener('click', () => {
+      readFormIntoState();
+      if (state.mealPlanMode === MEAL_PLAN_DAY_BY_DAY) {
+        const today = getCurrentDayName();
+        const mood = (state.themes[today] || '').trim();
+        if (!mood) {
+          alert('Please enter what you\'re in the mood for today.');
+          return;
+        }
+        renderDayTodayPage();
+        saveStateToStorage();
+        showPage(PAGE_DAY_TODAY);
+      } else {
+        renderCalendar();
+        renderSelectedRecipesRow();
+        saveStateToStorage();
+        showPage(PAGE_CALENDAR);
+      }
+    });
+  }
+
+  const backButton = document.getElementById('back-to-config-btn');
+  if (backButton) {
+    backButton.addEventListener('click', () => {
+      syncStateToForm();
+      showPage(PAGE_CONFIG);
+    });
+  }
+
+  const backFromTodayButton = document.getElementById('back-to-config-from-today-btn');
+  if (backFromTodayButton) {
+    backFromTodayButton.addEventListener('click', () => {
+      syncStateToForm();
+      showPage(PAGE_CONFIG);
+    });
+  }
+
+  // Allergies: YES/NO toggle, Configure button, modal
+  const allergiesNo = document.getElementById('allergies-no');
+  const allergiesYes = document.getElementById('allergies-yes');
+  const configureBtn = document.getElementById('allergies-configure-btn');
+  if (allergiesNo) {
+    allergiesNo.addEventListener('change', () => {
+      if (configureBtn) configureBtn.hidden = true;
+    });
+  }
+  if (allergiesYes) {
+    allergiesYes.addEventListener('change', () => {
+      if (configureBtn) configureBtn.hidden = false;
+    });
+  }
+  if (configureBtn) {
+    configureBtn.addEventListener('click', openAllergiesModal);
+  }
+  const allergiesModal = document.getElementById('allergies-modal');
+  // Meal plan mode: toggle daily themes and day-by-day section visibility
+  document.querySelectorAll('input[name="meal-plan-mode"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      readFormIntoState();
+      updateDailyThemesVisibility();
+      updateDayByDaySectionVisibility();
+    });
+  });
+
+  if (allergiesModal) {
+    allergiesModal.addEventListener('click', (e) => {
+      if (
+        e.target.id === 'allergies-modal-close' ||
+        e.target.id === 'allergies-modal-backdrop' ||
+        e.target.classList.contains('recipe-modal-close-btn')
+      ) {
+        closeAllergiesModal();
+      } else if (e.target.id === 'allergies-modal-save') {
+        saveAllergiesFromModal();
+      }
     });
   }
 
@@ -716,10 +1111,30 @@ function attachEventHandlers() {
     });
   }
 
+  // Click on day-today grid (single "Today" cell)
+  const dayTodayGrid = document.getElementById('day-today-grid');
+  if (dayTodayGrid) {
+    dayTodayGrid.addEventListener('click', (e) => {
+      const cell = e.target.closest('.calendar-cell-clickable');
+      if (!cell || !cell.dataset.day) return;
+      openRecipeModal(cell.dataset.day);
+    });
+  }
+
   // Click on the selected-recipe cell for a day -> same as clicking the day (pick or detail)
   const selectedGrid = document.getElementById('selected-recipes-grid');
   if (selectedGrid) {
     selectedGrid.addEventListener('click', (e) => {
+      const cell = e.target.closest('.selected-recipe-cell');
+      if (!cell || !cell.dataset.day) return;
+      openRecipeModal(cell.dataset.day);
+    });
+  }
+
+  // Click on day-today selected recipe cell
+  const dayTodaySelectedGrid = document.getElementById('day-today-selected-grid');
+  if (dayTodaySelectedGrid) {
+    dayTodaySelectedGrid.addEventListener('click', (e) => {
       const cell = e.target.closest('.selected-recipe-cell');
       if (!cell || !cell.dataset.day) return;
       openRecipeModal(cell.dataset.day);
@@ -760,7 +1175,26 @@ function attachEventHandlers() {
       if (generateGroceryList()) {
         openGroceryListModal();
         updateGroceryListButtons();
+        updateDayTodayGroceryButtons();
       }
+    });
+  }
+  const dayTodayGroceryGenerateBtn = document.getElementById('day-today-grocery-generate-btn');
+  if (dayTodayGroceryGenerateBtn) {
+    dayTodayGroceryGenerateBtn.addEventListener('click', () => {
+      if (generateGroceryList()) {
+        openGroceryListModal();
+        updateGroceryListButtons();
+        updateDayTodayGroceryButtons();
+      }
+    });
+  }
+  const dayTodayGroceryModeToggle = document.getElementById('day-today-grocery-mode-uncommon');
+  if (dayTodayGroceryModeToggle) {
+    dayTodayGroceryModeToggle.checked = state.groceryListMode === 'uncommon';
+    dayTodayGroceryModeToggle.addEventListener('change', () => {
+      state.groceryListMode = dayTodayGroceryModeToggle.checked ? 'uncommon' : 'full';
+      saveStateToStorage();
     });
   }
   const groceryModeToggle = document.getElementById('grocery-mode-uncommon');
@@ -785,5 +1219,6 @@ window.addEventListener('DOMContentLoaded', () => {
   renderSelectedRecipesRow();
   renderGroceryDaysRow();
   updateGroceryListButtons();
+  showPage(PAGE_CONFIG);
 });
 

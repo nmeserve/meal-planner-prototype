@@ -8,16 +8,17 @@
   </head>
   <body>
     <div class="app-root">
-      <header class="app-header">
-        <h1>Weekly Meal Planner Prototype</h1>
-      </header>
-
-      <main class="app-main">
-        <section class="config-panel">
-          <h2>Configuration</h2>
-          <form id="config-form" class="config-form">
+      <!-- Page 1: User inputs (portion size, daily themes) -->
+      <div id="page-config" class="page page-active">
+        <header class="app-header">
+          <h1>Weekly Meal Planner Prototype</h1>
+        </header>
+        <main class="app-main app-main-single">
+          <section class="config-panel config-panel-standalone">
+            <h2>Configuration</h2>
+            <form id="config-form" class="config-form">
             <div class="form-row">
-              <label for="portion-size">Portion size (number of servings)</label>
+              <label for="portion-size">Household Size</label>
               <input
                 id="portion-size"
                 name="portionSize"
@@ -28,43 +29,112 @@
               />
             </div>
 
-            <div class="themes-grid">
-              <div class="theme-row">
-                <label for="theme-monday">Monday theme</label>
-                <input id="theme-monday" name="monday" type="text" placeholder="Italian" />
-              </div>
-              <div class="theme-row">
-                <label for="theme-tuesday">Tuesday theme</label>
-                <input id="theme-tuesday" name="tuesday" type="text" placeholder="Mexican" />
-              </div>
-              <div class="theme-row">
-                <label for="theme-wednesday">Wednesday theme</label>
-                <input id="theme-wednesday" name="wednesday" type="text" placeholder="Slow Cooker" />
-              </div>
-              <div class="theme-row">
-                <label for="theme-thursday">Thursday theme</label>
-                <input id="theme-thursday" name="thursday" type="text" placeholder="Healthy" />
-              </div>
-              <div class="theme-row">
-                <label for="theme-friday">Friday theme</label>
-                <input id="theme-friday" name="friday" type="text" placeholder="Comfort Food" />
-              </div>
-              <div class="theme-row">
-                <label for="theme-saturday">Saturday theme</label>
-                <input id="theme-saturday" name="saturday" type="text" placeholder="Grill" />
-              </div>
-              <div class="theme-row">
-                <label for="theme-sunday">Sunday theme</label>
-                <input id="theme-sunday" name="sunday" type="text" placeholder="Leftovers" />
+            <div class="form-row">
+              <label class="leftovers-checkbox-label">
+                <input type="checkbox" id="make-extra-leftovers" name="makeExtraLeftovers" />
+                <span>Make extra for leftovers</span>
+              </label>
+            </div>
+
+            <div class="form-row">
+              <label>Do you have any food allergies?</label>
+              <div class="allergies-toggle-row">
+                <label class="allergies-radio-label">
+                  <input type="radio" name="allergies-yn" id="allergies-no" value="no" checked />
+                  <span>No</span>
+                </label>
+                <label class="allergies-radio-label">
+                  <input type="radio" name="allergies-yn" id="allergies-yes" value="yes" />
+                  <span>Yes</span>
+                </label>
+                <button type="button" id="allergies-configure-btn" class="secondary-button allergies-configure-btn" hidden>
+                  Configure allergies
+                </button>
               </div>
             </div>
 
-            <button type="button" id="generate-btn" class="primary-button">
-              Generate Weekly Framework
-            </button>
+            <div class="form-row">
+              <label>How do you usually plan meals?</label>
+              <div class="meal-plan-options">
+                <label class="meal-plan-option">
+                  <input type="radio" name="meal-plan-mode" value="fullWeek" checked />
+                  <span>1️⃣ Plan full week</span>
+                </label>
+                <label class="meal-plan-option">
+                  <input type="radio" name="meal-plan-mode" value="fewMeals" />
+                  <span>2️⃣ Plan a few meals</span>
+                </label>
+                <label class="meal-plan-option">
+                  <input type="radio" name="meal-plan-mode" value="dayByDay" />
+                  <span>3️⃣ Decide day-by-day</span>
+                </label>
+                <label class="meal-plan-option">
+                  <input type="radio" name="meal-plan-mode" value="bulkCooking" />
+                  <span>4️⃣ Bulk Cooking</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="day-by-day-mood-section" class="day-by-day-mood-section" hidden>
+              <div class="form-row">
+                <label for="today-mood-input">What are you in the mood for today?</label>
+                <input type="text" id="today-mood-input" placeholder="e.g. Italian, something light, comfort food" />
+              </div>
+            </div>
+
+            <div id="daily-themes-section" class="daily-themes-section">
+            <div class="themes-grid">
+              <div class="theme-row">
+                <label for="theme-monday">Monday</label>
+                <input id="theme-monday" name="monday" type="text" placeholder="Italian" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-tuesday">Tuesday</label>
+                <input id="theme-tuesday" name="tuesday" type="text" placeholder="Mexican" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-wednesday">Wednesday</label>
+                <input id="theme-wednesday" name="wednesday" type="text" placeholder="Slow Cooker" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-thursday">Thursday</label>
+                <input id="theme-thursday" name="thursday" type="text" placeholder="Healthy" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-friday">Friday</label>
+                <input id="theme-friday" name="friday" type="text" placeholder="Comfort Food" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-saturday">Saturday</label>
+                <input id="theme-saturday" name="saturday" type="text" placeholder="Grill" />
+              </div>
+              <div class="theme-row">
+                <label for="theme-sunday">Sunday</label>
+                <input id="theme-sunday" name="sunday" type="text" placeholder="Leftovers" />
+              </div>
+            </div>
+            </div>
+
+            <div class="config-actions">
+              <button type="button" id="generate-btn" class="primary-button">
+                SAVE
+              </button>
+              <button type="button" id="skip-to-calendar-btn" class="secondary-button">
+                Skip to calendar
+              </button>
+            </div>
           </form>
         </section>
+        </main>
+      </div>
 
+      <!-- Page 2: Calendar and grocery list -->
+      <div id="page-calendar" class="page">
+        <header class="app-header app-header-with-back">
+          <button type="button" id="back-to-config-btn" class="back-button" aria-label="Back to settings">← Back</button>
+          <h1>Weekly Meal Planner Prototype</h1>
+        </header>
+        <main class="app-main app-main-calendar">
         <section class="calendar-panel">
           <h2>Weekly Calendar</h2>
           <div id="calendar-grid" class="calendar-grid">
@@ -95,7 +165,48 @@
             </div>
           </section>
         </section>
-      </main>
+        </main>
+      </div>
+
+      <!-- Page 3: Day-by-day "Today" view (single day, recipe picker, grocery list) -->
+      <div id="page-day-today" class="page">
+        <header class="app-header app-header-with-back">
+          <button type="button" id="back-to-config-from-today-btn" class="back-button" aria-label="Back to settings">← Back</button>
+          <h1>Today</h1>
+        </header>
+        <main class="app-main app-main-calendar">
+        <section class="calendar-panel day-today-panel">
+          <h2 id="day-today-category" class="day-today-category">—</h2>
+          <div id="day-today-grid" class="calendar-grid day-today-single">
+            <!-- Single "Today" cell rendered by app.js -->
+          </div>
+          <h3 class="selected-recipes-heading">Selected recipe</h3>
+          <div id="day-today-selected-grid" class="calendar-grid selected-recipes-grid day-today-single">
+            <!-- Selected recipe for today rendered by app.js -->
+          </div>
+
+          <section class="grocery-section">
+            <h3 class="grocery-heading">Grocery list</h3>
+            <p class="grocery-hint subtle-text">Include today's recipe in your grocery list.</p>
+            <div class="grocery-days-row" id="day-today-grocery-days-row">
+              <!-- Single "Today" checkbox rendered by app.js -->
+            </div>
+            <div class="grocery-actions">
+              <div class="grocery-toggle-row">
+                <label class="grocery-toggle-label">
+                  <input type="checkbox" id="day-today-grocery-mode-uncommon" class="grocery-mode-toggle" />
+                  <span>Uncommon ingredients only (exclude pantry staples)</span>
+                </label>
+              </div>
+              <button type="button" class="primary-button" id="day-today-grocery-generate-btn" disabled>Generate grocery list</button>
+            </div>
+            <div id="day-today-grocery-list-links" class="grocery-list-links">
+              <!-- Clickable link rendered by app.js when list exists -->
+            </div>
+          </section>
+        </section>
+        </main>
+      </div>
     </div>
 
     <!-- Recipe popup modal: two views = "pick" (choose 1 of 3) or "detail" (ingredients + instructions) -->
@@ -124,6 +235,27 @@
         <div class="recipe-modal-actions" id="recipe-modal-actions-detail" hidden>
           <button type="button" class="primary-button" id="recipe-modal-pick-different">Pick different recipe</button>
           <button type="button" class="secondary-button recipe-modal-close-btn" id="recipe-modal-close-btn-detail">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Allergies modal: common allergies + OTHER free text -->
+    <div id="allergies-modal" class="recipe-modal">
+      <div class="recipe-modal-backdrop" id="allergies-modal-backdrop"></div>
+      <div class="recipe-modal-box allergies-modal-box">
+        <button type="button" class="recipe-modal-close" id="allergies-modal-close" aria-label="Close">×</button>
+        <h2 class="recipe-modal-title">Configure food allergies</h2>
+        <p class="allergies-modal-hint">Select allergens to exclude. Recipes will either omit these ingredients or include substitutions.</p>
+        <div class="allergies-checkbox-list" id="allergies-checkbox-list">
+          <!-- Rendered by app.js -->
+        </div>
+        <div class="allergies-other-row">
+          <label for="allergies-other-input">Other (free text)</label>
+          <input type="text" id="allergies-other-input" placeholder="e.g. mushrooms, coconut" />
+        </div>
+        <div class="recipe-modal-actions">
+          <button type="button" class="primary-button" id="allergies-modal-save">Save</button>
+          <button type="button" class="secondary-button recipe-modal-close-btn" id="allergies-modal-cancel">Cancel</button>
         </div>
       </div>
     </div>

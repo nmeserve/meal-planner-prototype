@@ -9,5 +9,5 @@ contextBridge.exposeInMainWorld('mealPlanner', {
 });
 
 contextBridge.exposeInMainWorld('mealAPI', {
-  generateRecipes: (category) => ipcRenderer.invoke('generate-recipes', category),
+  generateRecipes: (category, allergies, portionSize) => ipcRenderer.invoke('generate-recipes', category, allergies || [], portionSize),
 });
