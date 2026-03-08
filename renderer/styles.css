@@ -250,14 +250,6 @@ body {
   overflow: visible;
 }
 
-.day-today-panel .day-today-category {
-  font-size: 22px;
-  font-weight: 600;
-  color: #e5e7eb;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
 .day-today-panel .day-today-single,
 .day-today-panel #day-today-grid,
 .day-today-panel #day-today-selected-grid {
@@ -349,10 +341,6 @@ body {
 .day-today-panel .secondary-button {
   font-size: 15px;
   padding: 10px 18px;
-}
-
-#page-day-today .app-header h1 {
-  font-size: 28px;
 }
 
 .day-today-panel .grocery-list-link {

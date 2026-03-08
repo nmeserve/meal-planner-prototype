@@ -652,9 +652,6 @@ function renderDayTodayPage() {
   const today = getCurrentDayName();
   const category = (state.themes[today] || '').trim();
 
-  const categoryEl = document.getElementById('day-today-category');
-  if (categoryEl) categoryEl.textContent = category || '(no category)';
-
   const grid = document.getElementById('day-today-grid');
   if (grid) {
     grid.innerHTML = '';
