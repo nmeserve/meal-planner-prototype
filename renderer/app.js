@@ -22,6 +22,7 @@ const STORAGE_KEY = 'mealPlanner.weeklyState';
 const PAGE_CONFIG = 'page-config';
 const PAGE_CALENDAR = 'page-calendar';
 const PAGE_DAY_TODAY = 'page-day-today';
+const PAGE_FEW_MEALS = 'page-few-meals';
 
 /**
  * Switches the visible page. Only one page is active at a time.
@@ -51,6 +52,7 @@ const COMMON_ALLERGIES = [
 
 /** Meal plan mode: 'fullWeek' | 'fewMeals' | 'dayByDay' | 'bulkCooking' */
 const MEAL_PLAN_FULL_WEEK = 'fullWeek';
+const MEAL_PLAN_FEW_MEALS = 'fewMeals';
 const MEAL_PLAN_DAY_BY_DAY = 'dayByDay';
 
 /**
@@ -94,6 +96,12 @@ const state = {
   groceryListDays: new Set(),
   /** 'full' = all ingredients, 'uncommon' = exclude pantry staples */
   groceryListMode: 'full',
+  /** For few-meals mode: array of prompts, index 0 = Day 1, etc. */
+  fewMealsPrompts: ['', '', ''],
+  /** For few-meals mode: { "Day 1": recipe, "Day 2": recipe, ... } */
+  fewMealsRecipes: {},
+  /** For few-meals mode: which days selected for grocery list */
+  fewMealsGroceryDays: new Set(),
 };
 
 /** Full recipe objects for the current pick modal (so we can store the one the user selects). */
@@ -155,6 +163,25 @@ function loadStateFromStorage() {
     if (saved.groceryListMode === 'uncommon' || saved.groceryListMode === 'full') {
       state.groceryListMode = saved.groceryListMode;
     }
+    if (Array.isArray(saved.fewMealsPrompts) && saved.fewMealsPrompts.length > 0) {
+      state.fewMealsPrompts = saved.fewMealsPrompts.map(String);
+    }
+    if (saved.fewMealsRecipes && typeof saved.fewMealsRecipes === 'object') {
+      state.fewMealsRecipes = {};
+      Object.keys(saved.fewMealsRecipes).forEach((key) => {
+        const r = saved.fewMealsRecipes[key];
+        if (r && typeof r.name === 'string') {
+          state.fewMealsRecipes[key] = {
+            name: r.name,
+            ingredients: Array.isArray(r.ingredients) ? r.ingredients.map(String) : [],
+            instructions: Array.isArray(r.instructions) ? r.instructions.map(String) : [],
+          };
+        }
+      });
+    }
+    if (Array.isArray(saved.fewMealsGroceryDays)) {
+      state.fewMealsGroceryDays = new Set(saved.fewMealsGroceryDays);
+    }
   } catch (e) {
     console.warn('Could not load saved meal planner state:', e);
   }
@@ -174,6 +201,9 @@ function saveStateToStorage() {
       selectedRecipes: { ...state.selectedRecipes },
       groceryList: state.groceryList,
       groceryListMode: state.groceryListMode,
+      fewMealsPrompts: state.fewMealsPrompts,
+      fewMealsRecipes: state.fewMealsRecipes,
+      fewMealsGroceryDays: Array.from(state.fewMealsGroceryDays),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch (e) {
@@ -280,6 +310,50 @@ function updateDayByDaySectionVisibility() {
   section.hidden = state.mealPlanMode !== MEAL_PLAN_DAY_BY_DAY;
 }
 
+/**
+ * Shows or hides the few-meals section when fewMeals is selected.
+ */
+function updateFewMealsSectionVisibility() {
+  const section = document.getElementById('few-meals-section');
+  if (!section) return;
+  section.hidden = state.mealPlanMode !== MEAL_PLAN_FEW_MEALS;
+}
+
+/**
+ * Returns the category/prompt for a day. Handles "Day 1", "Day 2" (few-meals) and weekday names.
+ */
+function getCategoryForDay(dayName) {
+  if (typeof dayName === 'string' && dayName.startsWith('Day ')) {
+    const n = parseInt(dayName.replace('Day ', ''), 10);
+    if (!isNaN(n) && n >= 1 && state.fewMealsPrompts[n - 1] != null) {
+      return (state.fewMealsPrompts[n - 1] || '').trim();
+    }
+  }
+  return (state.themes[dayName] || '').trim();
+}
+
+/**
+ * Returns the selected recipe for a day. Handles few-meals "Day N" keys.
+ */
+function getRecipeForDay(dayName) {
+  if (typeof dayName === 'string' && dayName.startsWith('Day ')) {
+    return state.fewMealsRecipes[dayName] || null;
+  }
+  return state.selectedRecipes[dayName] || null;
+}
+
+/**
+ * Stores the selected recipe for a day. Handles few-meals "Day N" keys.
+ */
+function setRecipeForDay(dayName, recipe) {
+  if (typeof dayName === 'string' && dayName.startsWith('Day ')) {
+    if (recipe) state.fewMealsRecipes[dayName] = recipe;
+    else delete state.fewMealsRecipes[dayName];
+  } else {
+    state.selectedRecipes[dayName] = recipe;
+  }
+}
+
 function syncStateToForm() {
   const portionInput = document.getElementById('portion-size');
   if (portionInput) portionInput.value = String(state.portionSize);
@@ -304,6 +378,8 @@ function syncStateToForm() {
   if (bulkCookingRadio) bulkCookingRadio.checked = state.mealPlanMode === 'bulkCooking';
   updateDailyThemesVisibility();
   updateDayByDaySectionVisibility();
+  updateFewMealsSectionVisibility();
+  renderFewMealsDaysRow();
 
   const todayMoodInput = document.getElementById('today-mood-input');
   if (todayMoodInput) {
@@ -433,6 +509,26 @@ function generateGroceryList() {
   return true;
 }
 
+function generateGroceryListForFewMeals() {
+  const dayNames = Array.from(state.fewMealsGroceryDays);
+  if (dayNames.length === 0) return false;
+  const allLines = [];
+  dayNames.forEach((day) => {
+    const recipe = state.fewMealsRecipes[day];
+    if (recipe && Array.isArray(recipe.ingredients)) {
+      recipe.ingredients.forEach((line) => allLines.push(line));
+    }
+  });
+  const parsed = allLines.map(parseIngredientLine).filter(Boolean);
+  let items = aggregateIngredients(parsed);
+  if (state.groceryListMode === 'uncommon') {
+    items = items.filter((it) => !isPantryStaple(it.name));
+  }
+  state.groceryList = { dayNames, items };
+  saveStateToStorage();
+  return true;
+}
+
 function openGroceryListModal() {
   const modal = document.getElementById('grocery-list-modal');
   const titleEl = document.getElementById('grocery-list-modal-title');
@@ -443,7 +539,11 @@ function openGroceryListModal() {
   if (!modal) return;
 
   if (titleEl && state.groceryList && state.groceryList.dayNames) {
-    titleEl.textContent = `Grocery List (${formatDayRange(state.groceryList.dayNames)})`;
+    const names = state.groceryList.dayNames;
+    const label = names.every((d) => String(d).startsWith('Day '))
+      ? names.sort((a, b) => parseInt(a.replace('Day ', ''), 10) - parseInt(b.replace('Day ', ''), 10)).join(', ')
+      : formatDayRange(names);
+    titleEl.textContent = `Grocery List (${label})`;
   }
 
   if (state.groceryList && state.groceryList.items.length > 0) {
@@ -499,6 +599,7 @@ function clearGroceryList() {
   closeGroceryListModal();
   updateGroceryListButtons();
   updateDayTodayGroceryButtons();
+  updateFewMealsGroceryButtons();
 }
 
 function updateGroceryListButtons() {
@@ -612,6 +713,14 @@ function readFormIntoState() {
     const today = getCurrentDayName();
     if (todayMoodInput) state.themes[today] = (todayMoodInput.value || '').trim();
   }
+
+  if (state.mealPlanMode === MEAL_PLAN_FEW_MEALS) {
+    const prompts = [];
+    document.querySelectorAll('#few-meals-days-container input').forEach((input) => {
+      prompts.push((input.value || '').trim());
+    });
+    state.fewMealsPrompts = prompts.length > 0 ? prompts : ['', '', ''];
+  }
 }
 
 /**
@@ -642,6 +751,32 @@ function renderCalendar() {
     cell.appendChild(dayLabel);
     cell.appendChild(themeLabel);
     grid.appendChild(cell);
+  });
+}
+
+/**
+ * Renders the few-meals day inputs in the config section.
+ */
+function renderFewMealsDaysRow() {
+  const container = document.getElementById('few-meals-days-container');
+  if (!container) return;
+  container.innerHTML = '';
+  state.fewMealsPrompts.forEach((prompt, i) => {
+    const dayKey = `Day ${i + 1}`;
+    const row = document.createElement('div');
+    row.className = 'few-meals-day-row';
+    const label = document.createElement('label');
+    label.setAttribute('for', `few-meals-day-${i + 1}`);
+    label.textContent = dayKey;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = `few-meals-day-${i + 1}`;
+    input.placeholder = 'e.g. Italian, chicken, comfort food';
+    input.value = prompt || '';
+    input.dataset.dayIndex = String(i);
+    row.appendChild(label);
+    row.appendChild(input);
+    container.appendChild(row);
   });
 }
 
@@ -734,6 +869,114 @@ function renderDayTodayGroceryListLinks() {
 }
 
 /**
+ * Renders the few-meals page: day blocks, selected recipes, grocery row.
+ */
+function renderFewMealsPage() {
+  const grid = document.getElementById('few-meals-grid');
+  if (!grid) return;
+  const count = state.fewMealsPrompts.length;
+  grid.style.setProperty('--few-meals-count', String(count));
+  grid.innerHTML = '';
+  state.fewMealsPrompts.forEach((prompt, i) => {
+    const dayKey = `Day ${i + 1}`;
+    const cell = document.createElement('div');
+    cell.className = 'few-meals-day-cell calendar-cell-clickable';
+    cell.dataset.day = dayKey;
+    const dayLabel = document.createElement('div');
+    dayLabel.className = 'day-label';
+    dayLabel.textContent = dayKey;
+    const promptLabel = document.createElement('div');
+    promptLabel.className = 'prompt-label';
+    promptLabel.textContent = (prompt || '').trim() ? prompt : 'Click to pick a recipe';
+    cell.appendChild(dayLabel);
+    cell.appendChild(promptLabel);
+    grid.appendChild(cell);
+  });
+
+  const selectedGrid = document.getElementById('few-meals-selected-grid');
+  if (selectedGrid) {
+    selectedGrid.style.setProperty('--few-meals-count', String(count));
+    selectedGrid.innerHTML = '';
+    state.fewMealsPrompts.forEach((_, i) => {
+      const dayKey = `Day ${i + 1}`;
+      const cell = document.createElement('div');
+      cell.className = 'few-meals-selected-cell calendar-cell-clickable';
+      cell.dataset.day = dayKey;
+      const recipe = state.fewMealsRecipes[dayKey];
+      const label = document.createElement('div');
+      label.className = 'selected-recipe-label';
+      label.textContent = recipe ? recipe.name : '—';
+      const sub = document.createElement('div');
+      sub.className = 'calendar-theme-label';
+      sub.textContent = recipe ? 'Click to view details' : 'No recipe selected';
+      cell.appendChild(label);
+      cell.appendChild(sub);
+      selectedGrid.appendChild(cell);
+    });
+  }
+
+  renderFewMealsGroceryDaysRow();
+  updateFewMealsGroceryButtons();
+}
+
+function renderFewMealsGroceryDaysRow() {
+  const row = document.getElementById('few-meals-grocery-days-row');
+  if (!row) return;
+  row.innerHTML = '';
+  state.fewMealsPrompts.forEach((_, i) => {
+    const dayKey = `Day ${i + 1}`;
+    const label = document.createElement('label');
+    label.className = 'grocery-day-label';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = `few-meals-grocery-${i + 1}`;
+    cb.className = 'grocery-day-cb';
+    cb.dataset.day = dayKey;
+    cb.checked = state.fewMealsGroceryDays.has(dayKey);
+    cb.addEventListener('change', () => toggleFewMealsGroceryDay(dayKey));
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(' ' + dayKey));
+    row.appendChild(label);
+  });
+}
+
+function toggleFewMealsGroceryDay(dayKey) {
+  if (state.fewMealsGroceryDays.has(dayKey)) {
+    state.fewMealsGroceryDays.delete(dayKey);
+  } else {
+    state.fewMealsGroceryDays.add(dayKey);
+  }
+  const cb = document.querySelector(`#few-meals-grocery-days-row input[data-day="${dayKey}"]`);
+  if (cb) cb.checked = state.fewMealsGroceryDays.has(dayKey);
+  updateFewMealsGroceryButtons();
+}
+
+function updateFewMealsGroceryButtons() {
+  const count = state.fewMealsGroceryDays.size;
+  const generateBtn = document.getElementById('few-meals-grocery-generate-btn');
+  if (generateBtn) generateBtn.disabled = count < 1;
+  renderFewMealsGroceryListLinks();
+}
+
+function renderFewMealsGroceryListLinks() {
+  const container = document.getElementById('few-meals-grocery-list-links');
+  if (!container) return;
+  container.innerHTML = '';
+  if (state.groceryList && state.groceryList.dayNames && state.groceryList.dayNames.length > 0) {
+    const names = state.groceryList.dayNames;
+    const label = names.every((d) => String(d).startsWith('Day '))
+      ? names.sort((a, b) => parseInt(a.replace('Day ', ''), 10) - parseInt(b.replace('Day ', ''), 10)).join(', ')
+      : formatDayRange(names);
+    const link = document.createElement('button');
+    link.type = 'button';
+    link.className = 'grocery-list-link';
+    link.textContent = `Grocery List (${label})`;
+    link.addEventListener('click', openGroceryListModal);
+    container.appendChild(link);
+  }
+}
+
+/**
  * Renders the row below the calendar: one cell per day showing the selected recipe name (or blank).
  * Clicking a cell opens the pick modal (no recipe) or detail modal (has recipe).
  */
@@ -780,12 +1023,15 @@ const RECIPE_EMOJIS = ['🍝', '🥗', '🍕'];
 function openRecipeModal(dayName) {
   readFormIntoState();
 
-  if (!allThemesFilled()) {
+  const isFewMealsDay = typeof dayName === 'string' && dayName.startsWith('Day ');
+  const isDayByDay = state.mealPlanMode === MEAL_PLAN_DAY_BY_DAY;
+  if (!isFewMealsDay && !isDayByDay && !allThemesFilled()) {
     alert('Please fill in a category for every day of the week and click "SAVE" first.');
     return;
   }
 
-  if (state.selectedRecipes[dayName]) {
+  const recipe = getRecipeForDay(dayName);
+  if (recipe) {
     openRecipeDetailView(dayName);
   } else {
     openRecipePicker(dayName);
@@ -796,7 +1042,7 @@ function openRecipeModal(dayName) {
  * Opens the modal in detail view: ingredients and instructions for the locked-in recipe.
  */
 function openRecipeDetailView(dayName) {
-  const recipe = state.selectedRecipes[dayName];
+  const recipe = getRecipeForDay(dayName);
   if (!recipe) return;
 
   const modal = document.getElementById('recipe-modal');
@@ -838,7 +1084,7 @@ function openRecipeDetailView(dayName) {
  * Opens the modal in pick view: fetches 3 AI recipes and lets the user select one to lock in.
  */
 async function openRecipePicker(dayName) {
-  const category = (state.themes[dayName] || '').trim();
+  const category = getCategoryForDay(dayName);
   const modal = document.getElementById('recipe-modal');
   const titleEl = document.getElementById('recipe-modal-title');
   const pickView = document.getElementById('recipe-modal-pick-view');
@@ -963,14 +1209,16 @@ async function rollAgainInModal() {
 function selectRecipeForDay(dayName, recipeIndex) {
   const recipe = currentModalRecipes[recipeIndex];
   if (!recipe || typeof recipe !== 'object') return;
-  state.selectedRecipes[dayName] = {
+  const recipeData = {
     name: recipe.name || 'Recipe',
     ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients.slice() : [],
     instructions: Array.isArray(recipe.instructions) ? recipe.instructions.slice() : [],
   };
+  setRecipeForDay(dayName, recipeData);
   closeRecipeModal();
   renderSelectedRecipesRow();
   renderDayTodayPage();
+  renderFewMealsPage();
   saveStateToStorage();
 }
 
@@ -1009,6 +1257,15 @@ function attachEventHandlers() {
         renderDayTodayPage();
         saveStateToStorage();
         showPage(PAGE_DAY_TODAY);
+      } else if (state.mealPlanMode === MEAL_PLAN_FEW_MEALS) {
+        const hasPrompt = state.fewMealsPrompts.some((p) => (p || '').trim() !== '');
+        if (!hasPrompt) {
+          alert('Please enter at least one prompt for your meals.');
+          return;
+        }
+        renderFewMealsPage();
+        saveStateToStorage();
+        showPage(PAGE_FEW_MEALS);
       } else {
         renderCalendar();
         renderSelectedRecipesRow();
@@ -1032,6 +1289,15 @@ function attachEventHandlers() {
         renderDayTodayPage();
         saveStateToStorage();
         showPage(PAGE_DAY_TODAY);
+      } else if (state.mealPlanMode === MEAL_PLAN_FEW_MEALS) {
+        const hasPrompt = state.fewMealsPrompts.some((p) => (p || '').trim() !== '');
+        if (!hasPrompt) {
+          alert('Please enter at least one prompt for your meals.');
+          return;
+        }
+        renderFewMealsPage();
+        saveStateToStorage();
+        showPage(PAGE_FEW_MEALS);
       } else {
         renderCalendar();
         renderSelectedRecipesRow();
@@ -1057,6 +1323,32 @@ function attachEventHandlers() {
     });
   }
 
+  const backFromFewMealsButton = document.getElementById('back-to-config-from-few-meals-btn');
+  if (backFromFewMealsButton) {
+    backFromFewMealsButton.addEventListener('click', () => {
+      syncStateToForm();
+      showPage(PAGE_CONFIG);
+    });
+  }
+
+  // Few meals: click on day blocks and selected recipe cells
+  const fewMealsGrid = document.getElementById('few-meals-grid');
+  if (fewMealsGrid) {
+    fewMealsGrid.addEventListener('click', (e) => {
+      const cell = e.target.closest('.few-meals-day-cell');
+      if (!cell || !cell.dataset.day) return;
+      openRecipeModal(cell.dataset.day);
+    });
+  }
+  const fewMealsSelectedGrid = document.getElementById('few-meals-selected-grid');
+  if (fewMealsSelectedGrid) {
+    fewMealsSelectedGrid.addEventListener('click', (e) => {
+      const cell = e.target.closest('.few-meals-selected-cell');
+      if (!cell || !cell.dataset.day) return;
+      openRecipeModal(cell.dataset.day);
+    });
+  }
+
   // Allergies: YES/NO toggle, Configure button, modal
   const allergiesNo = document.getElementById('allergies-no');
   const allergiesYes = document.getElementById('allergies-yes');
@@ -1075,14 +1367,30 @@ function attachEventHandlers() {
     configureBtn.addEventListener('click', openAllergiesModal);
   }
   const allergiesModal = document.getElementById('allergies-modal');
-  // Meal plan mode: toggle daily themes and day-by-day section visibility
+  // Meal plan mode: toggle daily themes, day-by-day, and few-meals section visibility
   document.querySelectorAll('input[name="meal-plan-mode"]').forEach((radio) => {
     radio.addEventListener('change', () => {
       readFormIntoState();
       updateDailyThemesVisibility();
       updateDayByDaySectionVisibility();
+      updateFewMealsSectionVisibility();
     });
   });
+
+  // Few meals: Add day button
+  const addDayBtn = document.getElementById('few-meals-add-day-btn');
+  if (addDayBtn) {
+    addDayBtn.addEventListener('click', () => {
+      const prompts = [];
+      document.querySelectorAll('#few-meals-days-container input').forEach((input) => {
+        prompts.push((input.value || '').trim());
+      });
+      state.fewMealsPrompts = prompts.length > 0 ? prompts : state.fewMealsPrompts;
+      state.fewMealsPrompts.push('');
+      renderFewMealsDaysRow();
+      saveStateToStorage();
+    });
+  }
 
   if (allergiesModal) {
     allergiesModal.addEventListener('click', (e) => {
@@ -1191,6 +1499,23 @@ function attachEventHandlers() {
     dayTodayGroceryModeToggle.checked = state.groceryListMode === 'uncommon';
     dayTodayGroceryModeToggle.addEventListener('change', () => {
       state.groceryListMode = dayTodayGroceryModeToggle.checked ? 'uncommon' : 'full';
+      saveStateToStorage();
+    });
+  }
+  const fewMealsGroceryGenerateBtn = document.getElementById('few-meals-grocery-generate-btn');
+  if (fewMealsGroceryGenerateBtn) {
+    fewMealsGroceryGenerateBtn.addEventListener('click', () => {
+      if (generateGroceryListForFewMeals()) {
+        openGroceryListModal();
+        updateFewMealsGroceryButtons();
+      }
+    });
+  }
+  const fewMealsGroceryModeToggle = document.getElementById('few-meals-grocery-mode-uncommon');
+  if (fewMealsGroceryModeToggle) {
+    fewMealsGroceryModeToggle.checked = state.groceryListMode === 'uncommon';
+    fewMealsGroceryModeToggle.addEventListener('change', () => {
+      state.groceryListMode = fewMealsGroceryModeToggle.checked ? 'uncommon' : 'full';
       saveStateToStorage();
     });
   }

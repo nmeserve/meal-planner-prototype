@@ -82,6 +82,13 @@
               </div>
             </div>
 
+            <div id="few-meals-section" class="few-meals-section" hidden>
+              <div id="few-meals-days-container" class="few-meals-days-container">
+                <!-- Day inputs rendered by app.js -->
+              </div>
+              <button type="button" id="few-meals-add-day-btn" class="secondary-button">Add day</button>
+            </div>
+
             <div id="daily-themes-section" class="daily-themes-section">
             <div class="themes-grid">
               <div class="theme-row">
@@ -199,6 +206,44 @@
               <button type="button" class="primary-button" id="day-today-grocery-generate-btn" disabled>Generate grocery list</button>
             </div>
             <div id="day-today-grocery-list-links" class="grocery-list-links">
+              <!-- Clickable link rendered by app.js when list exists -->
+            </div>
+          </section>
+        </section>
+        </main>
+      </div>
+
+      <!-- Page 4: Plan a few meals (Day 1, Day 2, Day 3, etc.) -->
+      <div id="page-few-meals" class="page">
+        <header class="app-header app-header-with-back">
+          <button type="button" id="back-to-config-from-few-meals-btn" class="back-button" aria-label="Back to settings">← Back</button>
+        </header>
+        <main class="app-main app-main-calendar">
+        <section class="calendar-panel few-meals-panel">
+          <div id="few-meals-grid" class="few-meals-grid">
+            <!-- Day blocks rendered by app.js -->
+          </div>
+          <h3 class="selected-recipes-heading">Selected recipes</h3>
+          <div id="few-meals-selected-grid" class="few-meals-selected-grid">
+            <!-- Selected recipe per day rendered by app.js -->
+          </div>
+
+          <section class="grocery-section">
+            <h3 class="grocery-heading">Grocery list</h3>
+            <p class="grocery-hint subtle-text">Select days to combine ingredients into one list.</p>
+            <div class="grocery-days-row" id="few-meals-grocery-days-row">
+              <!-- Day checkboxes rendered by app.js -->
+            </div>
+            <div class="grocery-actions">
+              <div class="grocery-toggle-row">
+                <label class="grocery-toggle-label">
+                  <input type="checkbox" id="few-meals-grocery-mode-uncommon" class="grocery-mode-toggle" />
+                  <span>Uncommon ingredients only (exclude pantry staples)</span>
+                </label>
+              </div>
+              <button type="button" class="primary-button" id="few-meals-grocery-generate-btn" disabled>Generate grocery list</button>
+            </div>
+            <div id="few-meals-grocery-list-links" class="grocery-list-links">
               <!-- Clickable link rendered by app.js when list exists -->
             </div>
           </section>
